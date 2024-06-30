@@ -1,8 +1,9 @@
 use std::io::{self, Write};
+use crate::create_request::create_request_process;
 
-pub fn listen_for_input() {
+pub fn listen_for_input() -> i8 {
     loop {
-        print!("Enter your choice: ");
+        print!("Enter your choice (1 for Create new request, 2 for Load requests): ");
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
@@ -11,15 +12,12 @@ pub fn listen_for_input() {
         match input.trim() {
             "1" => {
                 println!("You selected: Create new request");
-                // Call function to create a new request
+                create_request_process();
             }
             "2" => {
                 println!("You selected: Load requests");
                 // Call function to load requests
-            }
-            "q" | "quit" | "exit" => {
-                println!("Exiting the application.");
-                break;
+                return 2;
             }
             _ => {
                 println!("Invalid choice, please try again.");

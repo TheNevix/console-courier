@@ -1,5 +1,7 @@
 mod ui;
 mod input;
+mod create_request;
+mod request;
 
 use cliclr::console_line::termcolor::{ColorChoice, StandardStream};
 use ui::print_welcome_text;
@@ -9,5 +11,6 @@ fn main() {
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
     print_welcome_text(&mut stdout);
 
-    listen_for_input();
+    let myChoice = listen_for_input();
+    println!("{}", myChoice);
 }
