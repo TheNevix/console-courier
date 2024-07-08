@@ -3,17 +3,17 @@ use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Stdout, Write};
 use std::path::{Path, PathBuf};
+use chrono::Local;
 use cliclr::{ConsoleLine, print_colored_text};
 use cliclr::console_line::termcolor::{Color, ColorChoice, StandardStream};
 use dialoguer::Select;
 use rfd::FileDialog;
 use crate::request::Request;
+use crate::Settings;
 
 pub fn create_request_process(){
     // Ask for method input
     clear_console();
-
-    let mut request_map = load_existing_requests("settings.json");
 
     let mut stdout = StandardStream::stdout(ColorChoice::Always);
     print_colored_text(&ConsoleLine{ text: String::from("You are now creating a request, to go back enter q"), color: Color::Cyan }, &mut stdout);
@@ -37,30 +37,25 @@ pub fn create_request_process(){
     io::stdin().read_line(&mut url).expect("Failed to read line");
     let url = url.trim().to_string();
 
-    // Ask user to select a JSON file
-    let json_file_path = select_json_file().expect("No file selected or invalid file");
+    ///load settigns
+    let settings = load_settings("settings.json").expect("Failed to load settings");
 
-    // Read the contents of the selected JSON file as a string
-    let body = fs::read_to_string(&json_file_path)
-        .expect("Failed to read file")
-        .trim()
-        .to_string();
+    /// Ask user to select a JSON file
+    let json_file_path = select_json_file(&settings).expect("No file selected or invalid file");
+    let json_file_name = json_file_path.file_name().expect("Failed to get file name").to_str().expect("Failed to convert file name to string").to_string();
 
-    let new_request = Request::new(desc.clone(), None, url.clone(), method.clone(), body.clone(), json_file_path.to_string_lossy().to_string());
+    let new_request = Request::new(desc.clone(), None, url.clone(), method.clone(), json_file_name);
 
-    // Generate a unique key for the request (you can use a UUID library for a more robust approach)
-    let key = format!("request_{}", request_map.len() + 1);
+    // Generate a unique filename for the request using the current time
+    let timestamp = Local::now().format("%Y%m%d%H%M%S").to_string();
+    let request_file_name = format!("request_{}.json", timestamp);
 
-    // Insert the Request into the HashMap
-    request_map.insert(key.clone(), new_request);
+    let request_file_path = Path::new(&settings.api_requests_path).join(request_file_name);
 
-    // Save the request map to settings.json
-    save_requests_to_file(&request_map, "settings.json");
+    save_request_to_file(&new_request, &request_file_path.to_str().expect("Failed to convert path to string"));
 
 }
-
-// Function to save the request map to a JSON file
-fn save_requests_to_file(requests: &HashMap<String, Request>, filename: &str) {
+fn save_request_to_file(request: &Request, filename: &str) {
     let file_path = Path::new(filename);
 
     let file = OpenOptions::new()
@@ -70,35 +65,25 @@ fn save_requests_to_file(requests: &HashMap<String, Request>, filename: &str) {
         .open(&file_path)
         .expect("Failed to create or open file");
 
-    serde_json::to_writer_pretty(file, &requests)
+    serde_json::to_writer_pretty(file, &request)
         .expect("Failed to write to file");
 }
 
-// Function to load existing requests from a JSON file if it exists
-fn load_existing_requests(filename: &str) -> HashMap<String, Request> {
-    let file_path = Path::new(filename);
-
-    if file_path.exists() {
-        let mut file = File::open(file_path).expect("Failed to open file");
-        let mut content = String::new();
-        file.read_to_string(&mut content).expect("Failed to read file");
-        serde_json::from_str(&content).expect("Failed to deserialize JSON")
-    } else {
-        HashMap::new()
-    }
-}
-
-
 // Function to prompt user to select a JSON file using rfd
-fn select_json_file() -> Option<PathBuf> {
+fn select_json_file(settings: &Settings) -> Option<PathBuf> {
     FileDialog::new()
         .add_filter("JSON", &["json"])
-        .set_directory(".")
+        .set_directory(&settings.request_bodies_path)
         .pick_file()
 }
-
 
 pub fn clear_console(){
     print!("\x1B[2J\x1B[1;1H");
     io::stdout().flush().unwrap();
+}
+
+fn load_settings(path: &str) -> io::Result<Settings> {
+    let data = fs::read_to_string(path)?;
+    let settings: Settings = serde_json::from_str(&data)?;
+    Ok(settings)
 }
