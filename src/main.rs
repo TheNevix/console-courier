@@ -2,6 +2,7 @@ mod ui;
 mod input;
 mod create_request;
 mod request;
+mod view_requests;
 
 use std::{fs, io};
 use std::path::Path;

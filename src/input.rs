@@ -1,5 +1,6 @@
 use std::io::{self, Write};
 use crate::create_request::create_request_process;
+use crate::view_requests::view_requests_process;
 
 pub fn listen_for_input() -> i8 {
     loop {
@@ -16,8 +17,7 @@ pub fn listen_for_input() -> i8 {
             }
             "2" => {
                 println!("You selected: Load requests");
-                // Call function to load requests
-                return 2;
+                view_requests_process();
             }
             _ => {
                 println!("Invalid choice, please try again.");
