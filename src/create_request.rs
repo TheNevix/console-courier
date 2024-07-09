@@ -41,8 +41,12 @@ pub fn create_request_process(){
     let settings = load_settings("settings.json").expect("Failed to load settings");
 
     /// Ask user to select a JSON file
-    let json_file_path = select_json_file(&settings).expect("No file selected or invalid file");
-    let json_file_name = json_file_path.file_name().expect("Failed to get file name").to_str().expect("Failed to convert file name to string").to_string();
+    let json_file_path: Option<PathBuf> = select_json_file(&settings);
+    let json_file_name: Option<String> = json_file_path
+        .as_ref()
+        .and_then(|path| path.file_name())
+        .and_then(|name| name.to_str())
+        .map(String::from);
 
     let new_request = Request::new(desc.clone(), None, url.clone(), method.clone(), json_file_name);
 
@@ -76,6 +80,7 @@ fn select_json_file(settings: &Settings) -> Option<PathBuf> {
         .set_directory(&settings.request_bodies_path)
         .pick_file()
 }
+
 
 pub fn clear_console(){
     print!("\x1B[2J\x1B[1;1H");

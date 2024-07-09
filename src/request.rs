@@ -7,11 +7,11 @@ pub struct Request{
     pub headers: Option<HashMap<String, String>>,
     pub url: String,
     pub method: String,
-    pub body_file_name: String
+    pub body_file_name: Option<String>
 }
 
 impl Request {
-    pub fn new(description: String, headers: Option<HashMap<String, String>>, url: String, method: String, body_file_name: String) -> Self {
+    pub fn new(description: String, headers: Option<HashMap<String, String>>, url: String, method: String, body_file_name: Option<String>) -> Self {
         Request { description, headers, url, method, body_file_name }
     }
 }
