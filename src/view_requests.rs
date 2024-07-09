@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::fs::{self, read_dir};
 use std::io::{self, Write};
 use std::path::Path;
+use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use serde_json::{to_string_pretty, Value};
 use crate::request::Request;
 use crate::Settings;
 
@@ -38,12 +40,73 @@ pub fn view_requests_process() {
 
     match input {
         Ok(num) if num > 0 && num <= requests.len() => {
-            println!("You selected request number {}: {}", num, requests[num - 1].description);
-            // Here you can add further processing for the selected request
+            let selected_request = &requests[num - 1];
+            println!("You selected request number {}: {}", num, selected_request.description);
+            println!("URL: {}", selected_request.url);
+            println!("Method: {}", selected_request.method);
+            println!("Body file: {}", selected_request.body_file_name.as_deref().unwrap_or("None"));
+
+            println!("Do you want to send this request? (yes/no):");
+            let mut send_input = String::new();
+            io::stdin().read_line(&mut send_input).expect("Failed to read line");
+            if send_input.trim().eq_ignore_ascii_case("yes") {
+                send_request(selected_request);
+            }
         }
         _ => println!("Invalid input."),
     }
 }
+
+
+fn send_request(request: &Request) {
+    let client = reqwest::blocking::Client::new();
+
+    let mut headers = HeaderMap::new();
+    if let Some(hdrs) = &request.headers {
+        for (key, value) in hdrs {
+            headers.insert(key.parse::<HeaderName>().unwrap(), value.parse::<HeaderValue>().unwrap());
+        }
+    }
+
+    let body = if let Some(body_file_path) = &request.body_file_name {
+        fs::read_to_string(body_file_path).expect("Failed to read body file")
+    } else {
+        String::new()
+    };
+
+    let response = match request.method.as_str() {
+        "GET" => client.get(&request.url).headers(headers).send(),
+        "POST" => client.post(&request.url).headers(headers).body(body).send(),
+        "PUT" => client.put(&request.url).headers(headers).body(body).send(),
+        "DELETE" => client.delete(&request.url).headers(headers).send(),
+        _ => {
+            println!("Unsupported HTTP method: {}", request.method);
+            return;
+        }
+    };
+
+    match response {
+        Ok(resp) => {
+            println!("Response Status: {}", resp.status());
+            let resp_text = resp.text().unwrap_or_else(|_| "Failed to read response body".to_string());
+
+            // Attempt to pretty-print the JSON response
+            match serde_json::from_str::<Value>(&resp_text) {
+                Ok(json) => {
+                    let pretty_json = to_string_pretty(&json).unwrap_or_else(|_| "Failed to format JSON".to_string());
+                    println!("Response Body: {}", pretty_json);
+                }
+                Err(_) => {
+                    println!("Response Body: {}", resp_text);
+                }
+            }
+        }
+        Err(err) => {
+            println!("Request failed: {}", err);
+        }
+    }
+}
+
 
 
 fn load_settings(path: &str) -> io::Result<Settings> {
