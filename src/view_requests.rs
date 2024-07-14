@@ -4,11 +4,12 @@ use std::io::{self, Write};
 use std::path::Path;
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde_json::{to_string_pretty, Value};
+use crate::helpers::file_helpers::load_app_settings;
 use crate::request::Request;
 use crate::Settings;
 
 pub fn view_requests_process() {
-    let settings = load_settings("settings.json").expect("Failed to load settings");
+    let settings = load_app_settings().expect("Failed to load settings");
 
     let request_dir = Path::new(&settings.api_requests_path);
     let entries = read_dir(request_dir).expect("Failed to read request directory");
@@ -105,13 +106,4 @@ fn send_request(request: &Request) {
             println!("Request failed: {}", err);
         }
     }
-}
-
-
-
-fn load_settings(path: &str) -> io::Result<Settings> {
-    let data = fs::read_to_string(path)?;
-    let settings: Settings = serde_json::from_str(&data)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, format!("Failed to deserialize JSON: {}", e)))?;
-    Ok(settings)
 }

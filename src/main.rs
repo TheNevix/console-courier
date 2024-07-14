@@ -3,6 +3,10 @@ mod input;
 mod create_request;
 mod request;
 mod view_requests;
+mod helpers;
+mod constants;
+
+use helpers::file_helpers::{load_app_settings, create_app_settings};
 
 use std::{fs, io};
 use std::path::Path;
@@ -10,6 +14,7 @@ use cliclr::console_line::termcolor::{ColorChoice, StandardStream};
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use ui::print_welcome_text;
+use crate::constants::APP_SETTINGS_FILE_NAME;
 use crate::input::listen_for_input;
 
 #[derive(Serialize, Deserialize)]
@@ -19,10 +24,8 @@ struct Settings {
 }
 
 fn main() {
-    let settings_path = "settings.json";
-
-    let settings = if Path::new(settings_path).exists() {
-        load_settings(settings_path).expect("Failed to load settings")
+    let settings = if Path::new(APP_SETTINGS_FILE_NAME).exists() {
+        load_app_settings().expect("Failed to load settings")
     } else {
         let api_requests_path = prompt_for_directory("Select a directory to save API requests as JSON");
         let request_bodies_path = prompt_for_directory("Select a directory to look for JSON request bodies");
@@ -30,7 +33,7 @@ fn main() {
             api_requests_path,
             request_bodies_path,
         };
-        save_settings(settings_path, &settings).expect("Failed to save settings");
+        create_app_settings(&settings).expect("Failed to save settings");
         settings
     };
 
@@ -49,16 +52,4 @@ fn prompt_for_directory(prompt: &str) -> String {
         .expect("Failed to select a directory");
 
     path.to_str().expect("Failed to convert path to string").to_string()
-}
-
-fn load_settings(path: &str) -> io::Result<Settings> {
-    let data = fs::read_to_string(path)?;
-    let settings: Settings = serde_json::from_str(&data)?;
-    Ok(settings)
-}
-
-fn save_settings(path: &str, settings: &Settings) -> io::Result<()> {
-    let data = serde_json::to_string_pretty(settings)?;
-    fs::write(path, data)?;
-    Ok(())
 }

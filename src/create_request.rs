@@ -8,6 +8,7 @@ use cliclr::{ConsoleLine, print_colored_text};
 use cliclr::console_line::termcolor::{Color, ColorChoice, StandardStream};
 use dialoguer::Select;
 use rfd::FileDialog;
+use crate::helpers::file_helpers::load_app_settings;
 use crate::request::Request;
 use crate::Settings;
 
@@ -38,7 +39,7 @@ pub fn create_request_process(){
     let url = url.trim().to_string();
 
     ///load settigns
-    let settings = load_settings("settings.json").expect("Failed to load settings");
+    let settings = load_app_settings().expect("Failed to load settings");
 
     /// Ask user to select a JSON file
     let json_file_path: Option<PathBuf> = select_json_file(&settings);
@@ -87,8 +88,3 @@ pub fn clear_console(){
     io::stdout().flush().unwrap();
 }
 
-fn load_settings(path: &str) -> io::Result<Settings> {
-    let data = fs::read_to_string(path)?;
-    let settings: Settings = serde_json::from_str(&data)?;
-    Ok(settings)
-}
